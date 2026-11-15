@@ -493,13 +493,15 @@ function updateCloudVisuals(t){
 function haptic(h,i,d){try{if(h.gp&&h.gp.hapticActuators&&h.gp.hapticActuators[0])h.gp.hapticActuators[0].pulse(i,d);}catch(e){}}
 const hands=[0,1].map(i=>{
   const c=renderer.xr.getController(i);rig.add(c);
-  const h={i:i,ctrl:c,side:i===0?'left':'right',connected:false,gp:null,prev:new THREE.Vector3(),has:false,vis:new THREE.Vector3(),touch:false,was:false,snapReady:true};
+  const h={i:i,ctrl:c,side:i===0?'left':'right',connected:false,gp:null,prev:new THREE.Vector3(),has:false,sl:new THREE.Vector3(),vis:new THREE.Vector3(),touch:false,was:false,snapReady:true};
   c.addEventListener('connected',e=>{h.connected=true;h.gp=e.data.gamepad||null;if(e.data.handedness==='left'||e.data.handedness==='right')h.side=e.data.handedness;h.has=false;attachWrist();});
   c.addEventListener('disconnected',()=>{h.connected=false;h.gp=null;});
   return h;
 });
 attachWrist();
-const BODY_VR=[[0,0.2],[-0.35,0.2],[-0.7,0.2]];
+const BODY_VR=[[0,0.2],[-0.3,0.2],[-0.6,0.2]];
+const ARM_SCALE=1.55; // virtual arms are longer than your real ones (like Gorilla Tag) so the ground is easy to reach
+function scaledHand(h){_v1.copy(camera.position);_v1.y-=0.2;return h.sl.copy(h.ctrl.position).sub(_v1).multiplyScalar(ARM_SCALE).add(_v1);}
 const BODY_DESK=[[0,0.25],[-0.6,0.25],[-1.3,0.25]];
 function resolveBody(offs){
   let grounded=false;
@@ -527,7 +529,7 @@ function vrPhysics(dt){
   _m.set(0,0,0);let n=0;
   for(const h of hands){
     if(!h.connected)continue;
-    const l=h.ctrl.position;
+    const l=scaledHand(h);
     if(!h.has){h.prev.copy(l);h.has=true;}
     _w.copy(l).applyMatrix4(rig.matrixWorld);
     h.touch=collideSphere(_w,HAND_R+0.01,_o);
@@ -552,7 +554,7 @@ function vrPhysics(dt){
   rig.updateMatrixWorld(true);
   for(const h of hands){
     if(!h.connected)continue;
-    _w.copy(h.ctrl.position).applyMatrix4(rig.matrixWorld);
+    _w.copy(scaledHand(h)).applyMatrix4(rig.matrixWorld);
     if(collideSphere(_w,HAND_R,_o))_w.add(_o);
     h.vis.copy(_w);(h.side==='left'?visL:visR).copy(_w);
   }
@@ -630,7 +632,7 @@ function checkHazards(){
     if(c.age>5.5)continue;const r=cloudR(c.age)*0.92;if(r<0.5)continue;
     if(Math.hypot(_h.x-c.x,_h.y-c.y,_h.z-c.z)<r||Math.hypot(_h.x-c.x,_h.y-0.7-c.y,_h.z-c.z)<r){die('fart');return;}
   }
-  const feet=_h.y-(renderer.xr.isPresenting?0.9:1.55);
+  const feet=_h.y-(renderer.xr.isPresenting?0.8:1.55);
   if(feet<0.7&&inLava(_h.x,_h.z))die('lava');
 }
 
